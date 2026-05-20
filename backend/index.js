@@ -1,8 +1,6 @@
 import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
-import path from "path";
-import { fileURLToPath } from "url";
 
 import connectDb from "./config/config.js";
 
@@ -25,14 +23,20 @@ connectDb();
 
 const app = express();
 
-// Needed for ES module __dirname
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const allowedOrigins = [
+  "http://localhost:5173",
+  process.env.FRONTEND_URL,
+];
 
-// Middleware
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    origin: function (origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error(`Not allowed by CORS: ${origin}`));
+      }
+    },
     credentials: true,
   })
 );
@@ -40,10 +44,6 @@ app.use(
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Serve uploaded images
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
-
-// Test route
 app.get("/", (req, res) => {
   res.status(200).json({
     success: true,
@@ -67,7 +67,6 @@ app.use("/api/notifications", notificationRoutes);
 app.use("/api/admin", adminReportRoutes);
 app.use("/api/admin", adminUserRoutes);
 
-// 404 route handler
 app.use((req, res) => {
   res.status(404).json({
     success: false,
@@ -75,7 +74,6 @@ app.use((req, res) => {
   });
 });
 
-// Port
 const PORT = process.env.PORT || 5001;
 
 app.listen(PORT, () => {
